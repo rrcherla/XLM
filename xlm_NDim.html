@@ -1,0 +1,2647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>XLM – Step 4 (n-D Perceptron with 2D Projections)</title>
+
+  <!-- SheetJS for Excel/CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+
+  <style>
+    body {
+      margin: 16px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    #layoutControls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+      color: #9ca3af;
+    }
+    .layout-btn {
+      background: #111827;
+      border: 1px solid #4b5563;
+      color: #e5e7eb;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .layout-btn.active {
+      background: #10b981;
+      border-color: #22c55e;
+      color: #020617;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: minmax(0,1fr) minmax(0,1fr);
+      gap: 16px;
+      height: calc(100vh - 140px);
+    }
+    .panel {
+      background: #020617;
+      border-radius: 12px;
+      border: 1px solid #9ca3af;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5),
+                  0 10px 10px -5px rgba(0,0,0,0.4);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      position: relative;
+    }
+    .panel h2 {
+      font-size: 1rem;
+      margin: 0 0 4px 0;
+      color: #f97316;
+    }
+    .dim-tag {
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-left: 6px;
+      font-weight: normal;
+    }
+    .panel-sub {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .top-body {
+      flex: 1;
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+      min-height: 0;
+    }
+    .pane-file {
+      flex: 1.4;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+    .pane-controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      border-radius: 8px;
+      border: 1px solid #9ca3af;
+      background: #020617;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+    }
+    .table-container {
+      flex: 1;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid #9ca3af;
+      background: #020617;
+      margin-top: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      background: #0f172a;
+      z-index: 1;
+    }
+    th, td {
+      border-bottom: 1px solid #111827;
+      padding: 4px 6px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    thead th {
+      color: #d1d5db;
+      border-bottom-color: #6b7280;
+      background: #020617;
+    }
+    tbody tr:nth-child(even) { background: #020617; }
+    tbody tr:nth-child(odd)  { background: #030712; }
+    .eye-cell {
+      text-align: center;
+      cursor: pointer;
+      width: 28px;
+    }
+    .eye-icon {
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    input[type="file"] {
+      font-size: 0.8rem;
+      color: #e5e7eb;
+    }
+    button {
+      background: #374151;
+      border: 1px solid #6b7280;
+      color: #e5e7eb;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-right: 4px;
+      margin-top: 4px;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .small-input {
+      width: 52px;
+      padding: 2px 4px;
+      border-radius: 6px;
+      border: 1px solid #374151;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+    }
+    .status {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-top: 4px;
+      white-space: pre-line;
+    }
+    .canvas-wrapper {
+      flex: 1;
+      border-radius: 10px;
+      border: 1px solid #9ca3af;
+      background: #020617;
+      overflow: hidden;
+      min-height: 0;
+      margin-top: 4px;
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    #plot3DContainer {
+      width: 100%;
+      height: 100%;
+    }
+    .legend {
+      font-size: 0.78rem;
+      margin-top: 4px;
+      color: #9ca3af;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 10px;
+    }
+    .dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      margin-right: 4px;
+    }
+    .point-popup {
+      position: absolute;
+      background: #020617;
+      border: 1px solid #6b7280;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 0.78rem;
+      color: #e5e7eb;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.7);
+      pointer-events: none;
+      z-index: 10;
+      max-width: 260px;
+      display: none;
+    }
+    .lock-camera, .heatmap-toggle {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    .lock-camera input,
+    .heatmap-toggle input {
+      transform: scale(0.9);
+    }
+    select {
+      background: #020617;
+      border: 1px solid #6b7280;
+      border-radius: 999px;
+      color: #e5e7eb;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      margin-left: 4px;
+    }
+    .dim-select-label {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>XLM – Step 4 (n-D Perceptron with 2D Projections)</h1>
+  <div class="subtitle">
+    <strong>Training:</strong> Perceptron in D dimensions (full n-D).<br>
+    <strong>Visualisation:</strong> 2D projections (choose X/Y dims) + optional 3D view when D=3.<br>
+    <span id="axisSummaryTop">Load training data to see schema.</span>
+  </div>
+
+  <!-- Layout controls -->
+  <div id="layoutControls">
+    Layout:
+    <button class="layout-btn active" data-layout="tiled">Tiled</button>
+    <button class="layout-btn" data-layout="active">Active</button>
+  </div>
+
+  <div id="gridContainer" class="grid">
+    <!-- TRAINING LEFT -->
+    <div class="panel" id="trainLeftPanel">
+      <div class="panel-header">
+        <div>
+          <h2>
+            Labelled data (training)
+            <span id="trainDimHead" class="dim-tag">(D = –)</span>
+          </h2>
+          <div class="panel-sub">
+            Row 1: D,B · Rows 2..(1+B): bias vectors · Row 2+B: headers · Rest: data<br>
+            Headers: Seq, ID, Desc, x₁..xD, bias1..biasB, Score
+          </div>
+        </div>
+        <div>
+          <input type="file" id="labelFile" accept=".xlsx,.xls,.csv" />
+        </div>
+      </div>
+      <div class="panel-sub" id="schemaInfo">
+        D = ?, B = ? | rows = ? | file: –
+      </div>
+
+      <div class="top-body">
+        <div class="pane-file">
+          <div class="table-container">
+            <table id="labelTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="status" id="labelStatus">
+            Choose a labelled-data file to begin.
+          </div>
+        </div>
+
+        <div class="pane-controls">
+          <div class="controls-row">
+            <button id="plotBtn" disabled>PLOT / RESET</button>
+            <label style="font-size:0.78rem; color:#9ca3af;">
+              Bias:
+              <select id="biasSelect" disabled></select>
+            </label>
+          </div>
+          <div class="controls-row">
+            <button id="runBtn"  disabled>Run ▶</button>
+            <button id="stepBtn" disabled>Step ➜</button>
+            <button id="drawVectorBtn" disabled>Draw vector (2D)</button>
+            <button id="writeTrainBtn" disabled>WRITE TRAIN</button>
+          </div>
+          <div class="controls-row" style="margin-top:4px;">
+            <span>Start w (for selected bias):</span>
+            <label>w₀ <input id="startW0" class="small-input" type="text" placeholder="0"></label>
+            <label>w₁ <input id="startW1" class="small-input" type="text" placeholder="0"></label>
+            <label>w₂ <input id="startW2" class="small-input" type="text" placeholder="0"></label>
+            <label>w₃ <input id="startW3" class="small-input" type="text" placeholder="0"></label>
+          </div>
+          <div id="currentStats" class="status">
+            CURRENT w = [0,0,0]
+            iters = 0 · acc (current) = –
+          </div>
+          <div id="bestStats" class="status">
+            BEST w = [–]
+            matches = 0 / 0 (0.0%)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRAINING RIGHT -->
+    <div class="panel" id="trainRightPanel">
+      <div class="panel-header">
+        <div>
+          <h2>
+            Labelled data plot (2D / 3D)
+            <span id="trainPlotDimHead" class="dim-tag">(D = –)</span>
+          </h2>
+          <div class="panel-sub">
+            <span id="axisSummaryPlot">Load training data to see axis labels / dims.</span>
+            <label class="lock-camera" id="lockCameraWrapper">
+              <input type="checkbox" id="lockCamera">
+              Lock camera (2D)
+            </label>
+            <label class="heatmap-toggle" id="heatmapWrapper">
+              <input type="checkbox" id="showHeatmap">
+              Show heatmap (2D)
+            </label>
+            <span id="trainDimSelectors" class="dim-select-label" style="display:inline-flex; align-items:center;">
+              X dim:
+              <select id="trainDimX"></select>
+              Y dim:
+              <select id="trainDimY"></select>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="plotCanvas"></canvas>
+        <div id="plot3DContainer" style="display:none;"></div>
+        <div id="pointPopup" class="point-popup"></div>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:#22c55e;"></span>label 1</span>
+        <span><span class="dot" style="background:#ef4444;"></span>label 0</span>
+        <span><span class="dot" style="background:#06b6d4;"></span>current projected line / plane</span>
+        <span><span class="dot" style="background:#eab308;"></span>best projected line / plane</span>
+        <span><span class="dot" style="background:#eab308;"></span>selected point (blinks)</span>
+      </div>
+      <div class="legend" id="axis3DInfo" style="display:none;"></div>
+    </div>
+
+    <!-- CLASSIFICATION LEFT -->
+    <div class="panel" id="classLeftPanel">
+      <div class="panel-header">
+        <div>
+          <h2>
+            Classification data
+            <span id="classDimHead" class="dim-tag">(D = –)</span>
+          </h2>
+          <div class="panel-sub">
+            Use output file from training (same D,B, bias rows). Biases and Score will be re-inferred.
+          </div>
+        </div>
+        <div>
+          <input type="file" id="classFile" accept=".xlsx,.xls,.csv" />
+        </div>
+      </div>
+      <div class="panel-sub" id="classSchemaInfo">
+        D = ?, B = ? | rows = ? | file: –
+      </div>
+
+      <div class="top-body">
+        <div class="pane-file">
+          <div class="table-container">
+            <table id="classTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="status" id="classStatus">
+            Load classification file, then click CLASSIFY.
+          </div>
+        </div>
+
+        <div class="pane-controls">
+          <div class="controls-row">
+            <button id="classifyBtn" disabled>CLASSIFY</button>
+            <button id="writeClassBtn" disabled>WRITE CLASSIFIED</button>
+          </div>
+          <div class="controls-row">
+            <span>View bias on plot:</span>
+            <select id="classBiasSelect" disabled></select>
+          </div>
+          <div class="status" id="classStats">
+            No classification performed yet.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLASSIFICATION RIGHT -->
+    <div class="panel" id="classRightPanel">
+      <div class="panel-header">
+        <div>
+          <h2>
+            Classification plot (2D projection)
+            <span id="classPlotDimHead" class="dim-tag">(D = –)</span>
+          </h2>
+          <div class="panel-sub">
+            <span id="axisSummaryClass">Load classification data to see axis labels.</span>
+            <label class="lock-camera">
+              <input type="checkbox" id="lockCameraClass">
+              Lock camera
+            </label>
+            <span class="dim-select-label">
+              X dim:
+              <select id="classDimX"></select>
+              Y dim:
+              <select id="classDimY"></select>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-wrapper">
+        <canvas id="classCanvas"></canvas>
+        <div id="classPointPopup" class="point-popup"></div>
+      </div>
+      <div class="legend">
+        <span><span class="dot" style="background:#22c55e;"></span>predicted 1</span>
+        <span><span class="dot" style="background:#ef4444;"></span>predicted 0</span>
+        <span><span class="dot" style="background:#06b6d4;"></span>projected decision line</span>
+        <span><span class="dot" style="background:#eab308;"></span>selected point (blinks)</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const labelFileInput   = document.getElementById('labelFile');
+    const labelTable       = document.getElementById('labelTable');
+    const labelThead       = labelTable.querySelector('thead');
+    const labelTbody       = labelTable.querySelector('tbody');
+    const labelStatus      = document.getElementById('labelStatus');
+    const schemaInfo       = document.getElementById('schemaInfo');
+
+    const plotCanvas       = document.getElementById('plotCanvas');
+    const plot3DContainer  = document.getElementById('plot3DContainer');
+    const pointPopup       = document.getElementById('pointPopup');
+    const lockCameraCheckbox = document.getElementById('lockCamera');
+    const heatmapCheckbox  = document.getElementById('showHeatmap');
+    const lockCameraWrapper= document.getElementById('lockCameraWrapper');
+    const heatmapWrapper   = document.getElementById('heatmapWrapper');
+    const axisSummaryTop   = document.getElementById('axisSummaryTop');
+    const axisSummaryPlot  = document.getElementById('axisSummaryPlot');
+    const axis3DInfoDiv    = document.getElementById('axis3DInfo');
+
+    const trainDimSelectors = document.getElementById('trainDimSelectors');
+    const trainDimXSelect   = document.getElementById('trainDimX');
+    const trainDimYSelect   = document.getElementById('trainDimY');
+
+    const plotBtn          = document.getElementById('plotBtn');
+    const stepBtn          = document.getElementById('stepBtn');
+    const runBtn           = document.getElementById('runBtn');
+    const drawVectorBtn    = document.getElementById('drawVectorBtn');
+    const writeTrainBtn    = document.getElementById('writeTrainBtn');
+    const biasSelect       = document.getElementById('biasSelect');
+
+    const startW0Input     = document.getElementById('startW0');
+    const startW1Input     = document.getElementById('startW1');
+    const startW2Input     = document.getElementById('startW2');
+    const startW3Input     = document.getElementById('startW3');
+
+    const currentStatsDiv  = document.getElementById('currentStats');
+    const bestStatsDiv     = document.getElementById('bestStats');
+
+    const classFileInput   = document.getElementById('classFile');
+    const classTable       = document.getElementById('classTable');
+    const classThead       = classTable.querySelector('thead');
+    const classTbody       = classTable.querySelector('tbody');
+    const classStatus      = document.getElementById('classStatus');
+    const classSchemaInfo  = document.getElementById('classSchemaInfo');
+
+    const classifyBtn      = document.getElementById('classifyBtn');
+    const writeClassBtn    = document.getElementById('writeClassBtn');
+    const classBiasSelect  = document.getElementById('classBiasSelect');
+    const classStatsDiv    = document.getElementById('classStats');
+
+    const classCanvas      = document.getElementById('classCanvas');
+    const classPointPopup  = document.getElementById('classPointPopup');
+    const lockCameraClass  = document.getElementById('lockCameraClass');
+    const axisSummaryClass = document.getElementById('axisSummaryClass');
+
+    const classDimXSelect  = document.getElementById('classDimX');
+    const classDimYSelect  = document.getElementById('classDimY');
+
+    const trainLeftPanel   = document.getElementById('trainLeftPanel');
+    const trainRightPanel  = document.getElementById('trainRightPanel');
+    const classLeftPanel   = document.getElementById('classLeftPanel');
+    const classRightPanel  = document.getElementById('classRightPanel');
+    const gridContainer    = document.getElementById('gridContainer');
+
+    const layoutButtons    = document.querySelectorAll('.layout-btn');
+
+    // NEW: dimension tags in headings
+    const trainDimHead     = document.getElementById('trainDimHead');
+    const trainPlotDimHead = document.getElementById('trainPlotDimHead');
+    const classDimHead     = document.getElementById('classDimHead');
+    const classPlotDimHead = document.getElementById('classPlotDimHead');
+
+    const PADDING_2D       = 40;
+
+    let ctx                = plotCanvas.getContext('2d');
+    let ctxClass           = classCanvas.getContext('2d');
+
+    let D = null;
+    let B = null;
+    let labelledData = [];
+    let headerRowGlobal = null;
+    let biasNames = [];
+    let biasWeights = [];
+    let biasBestW = [];
+    let biasBestCorrect = [];
+    let biasBestTotal = [];
+    let biasIter = [];
+    let biasConverged = [];
+    let currentBias = 0;
+
+    let featureNamesTrain = [];
+    let trainFeatureMeans = [];
+
+    let featureNamesClass = [];
+    let classFeatureMeans = [];
+
+    let trainDimXIndex = 0;
+    let trainDimYIndex = 1;
+
+    let classDimXIndex = 0;
+    let classDimYIndex = 1;
+
+    let pointScreenPositions = [];
+    let selectedIndex = null;
+    let popupIndex = null;
+
+    let cameraLocked = false;
+    let boundsCache = null;
+    let lastBounds = null;
+    let showHeatmap = false;
+
+    let drawingVector = false;
+    let drawClickPoints = [];
+
+    let isRunning = false;
+    let runIntervalId = null;
+
+    let blinkState = false;
+    let blinkIntervalId = null;
+
+    // 3D training
+    let use3DTrain = false;
+    let trainScene = null;
+    let trainCamera = null;
+    let trainRenderer = null;
+    let trainPointsGroup = null;
+    let trainPlaneCurrent = null;
+    let trainPlaneBest = null;
+    let trainAxesHelper = null;
+    let trainLastSpan = null;
+    let trainBoundsLocal = null;
+    let raycaster = null;
+    let mouseVector = null;
+
+    // Classification
+    let classD = null;
+    let classB = null;
+    let classData = [];
+    let classHeaderRow = null;
+    let classBiasNames = [];
+    let classBiasWeights = [];
+    let classCurrentBias = 0;
+
+    let classPointScreenPositions = [];
+    let classSelectedIndex = null;
+    let classPopupIndex = null;
+    let classCameraLocked = false;
+    let classBoundsCache = null;
+    let classLastBounds = null;
+
+    // Layout
+    let layoutMode = 'tiled';
+    let activeSection = 'learning';
+
+    function applyLayout() {
+      if (layoutMode === 'tiled') {
+        gridContainer.style.gridTemplateRows = 'minmax(0,1fr) minmax(0,1fr)';
+        trainLeftPanel.style.display  = 'flex';
+        trainRightPanel.style.display = 'flex';
+        classLeftPanel.style.display  = 'flex';
+        classRightPanel.style.display = 'flex';
+      } else {
+        gridContainer.style.gridTemplateRows = 'minmax(0,1fr)';
+        if (activeSection === 'learning') {
+          trainLeftPanel.style.display  = 'flex';
+          trainRightPanel.style.display = 'flex';
+          classLeftPanel.style.display  = 'none';
+          classRightPanel.style.display = 'none';
+        } else {
+          trainLeftPanel.style.display  = 'none';
+          trainRightPanel.style.display = 'none';
+          classLeftPanel.style.display  = 'flex';
+          classRightPanel.style.display = 'flex';
+        }
+      }
+      resizeCanvases();
+    }
+
+    layoutButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.layout;
+        if (!mode) return;
+        layoutMode = mode;
+        layoutButtons.forEach(b => b.classList.toggle('active', b.dataset.layout === mode));
+        applyLayout();
+      });
+    });
+
+    function readSheetAsAOA(file, cb) {
+      const reader = new FileReader();
+      const isBinary = !file.name.toLowerCase().endsWith('.csv');
+
+      reader.onload = e => {
+        try {
+          const data = e.target.result;
+          const wb = XLSX.read(data, { type: isBinary ? 'binary' : 'string' });
+          const sheetName = wb.SheetNames[0];
+          const sheet = wb.Sheets[sheetName];
+          const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          cb(null, aoa);
+        } catch (err) {
+          cb(err);
+        }
+      };
+      reader.onerror = err => cb(err);
+      if (isBinary) reader.readAsBinaryString(file);
+      else reader.readAsText(file);
+    }
+
+    function renderLabelTable(headers, rows) {
+      labelThead.innerHTML = '';
+      labelTbody.innerHTML = '';
+      if (!headers || headers.length === 0) return;
+
+      const trHead = document.createElement('tr');
+      const thEye = document.createElement('th');
+      thEye.textContent = '👁';
+      trHead.appendChild(thEye);
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h ?? '';
+        trHead.appendChild(th);
+      });
+      labelThead.appendChild(trHead);
+
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const eyeTd = document.createElement('td');
+        eyeTd.className = 'eye-cell';
+        const eyeSpan = document.createElement('span');
+        eyeSpan.textContent = '👁';
+        eyeSpan.className = 'eye-icon';
+        eyeSpan.dataset.index = idx;
+        eyeTd.appendChild(eyeSpan);
+        tr.appendChild(eyeTd);
+
+        headers.forEach((_, j) => {
+          const td = document.createElement('td');
+          td.textContent = row[j] !== undefined ? row[j] : '';
+          tr.appendChild(td);
+        });
+        labelTbody.appendChild(tr);
+      });
+    }
+
+    function renderClassTable(headers, rows) {
+      classThead.innerHTML = '';
+      classTbody.innerHTML = '';
+      if (!headers || headers.length === 0) return;
+
+      const trHead = document.createElement('tr');
+      const thEye = document.createElement('th');
+      thEye.textContent = '👁';
+      trHead.appendChild(thEye);
+      headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h ?? '';
+        trHead.appendChild(th);
+      });
+      classThead.appendChild(trHead);
+
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const eyeTd = document.createElement('td');
+        eyeTd.className = 'eye-cell';
+        const eyeSpan = document.createElement('span');
+        eyeSpan.textContent = '👁';
+        eyeSpan.className = 'eye-icon';
+        eyeSpan.dataset.index = idx;
+        eyeTd.appendChild(eyeSpan);
+        tr.appendChild(eyeTd);
+
+        headers.forEach((_, j) => {
+          const td = document.createElement('td');
+          td.textContent = row[j] !== undefined ? row[j] : '';
+          tr.appendChild(td);
+        });
+        classTbody.appendChild(tr);
+      });
+    }
+
+    function computeFeatureMeansTrain() {
+      trainFeatureMeans = new Array(D).fill(0);
+      const counts = new Array(D).fill(0);
+      for (const row of labelledData) {
+        for (let d = 0; d < D; d++) {
+          const v = Number(row.features[d]);
+          if (Number.isFinite(v)) {
+            trainFeatureMeans[d] += v;
+            counts[d]++;
+          }
+        }
+      }
+      for (let d = 0; d < D; d++) {
+        if (counts[d] > 0) trainFeatureMeans[d] /= counts[d];
+        else trainFeatureMeans[d] = 0;
+      }
+    }
+
+    function computeFeatureMeansClass() {
+      classFeatureMeans = new Array(classD).fill(0);
+      const counts = new Array(classD).fill(0);
+      for (const row of classData) {
+        for (let d = 0; d < classD; d++) {
+          const v = Number(row.features[d]);
+          if (Number.isFinite(v)) {
+            classFeatureMeans[d] += v;
+            counts[d]++;
+          }
+        }
+      }
+      for (let d = 0; d < classD; d++) {
+        if (counts[d] > 0) classFeatureMeans[d] /= counts[d];
+        else classFeatureMeans[d] = 0;
+      }
+    }
+
+    function computeBounds2D(points, dimX, dimY) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const row of points) {
+        const x = row.features[dimX];
+        const y = row.features[dimY];
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+      if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+        return { minX: 0, maxX: 1, minY: 0, maxY: 1 };
+      }
+      const dx = maxX - minX || 1;
+      const dy = maxY - minY || 1;
+      const mx = 0.1 * dx;
+      const my = 0.1 * dy;
+      return {
+        minX: minX - mx,
+        maxX: maxX + mx,
+        minY: minY - my,
+        maxY: maxY + my
+      };
+    }
+
+    function computeBounds3D(points) {
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      let minZ = Infinity, maxZ = -Infinity;
+      for (const row of points) {
+        const x = Number(row.features[0]);
+        const y = Number(row.features[1]);
+        const z = Number(row.features[2]);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+        if (z < minZ) minZ = z;
+        if (z > maxZ) maxZ = z;
+      }
+      if (!Number.isFinite(minX)) {
+        return { minX:-1,maxX:1,minY:-1,maxY:1,minZ:-1,maxZ:1 };
+      }
+      const dx = maxX - minX || 1;
+      const dy = maxY - minY || 1;
+      const dz = maxZ - minZ || 1;
+      const mx = 0.1 * dx;
+      const my = 0.1 * dy;
+      const mz = 0.1 * dz;
+      return {
+        minX: minX - mx, maxX: maxX + mx,
+        minY: minY - my, maxY: maxY + my,
+        minZ: minZ - mz, maxZ: maxZ + mz
+      };
+    }
+
+    labelFileInput.addEventListener('change', () => {
+      const file = labelFileInput.files[0];
+      if (!file) return;
+
+      if (runIntervalId !== null) {
+        clearInterval(runIntervalId);
+        runIntervalId = null;
+      }
+      isRunning = false;
+      runBtn.textContent = 'Run ▶';
+
+      activeSection = 'learning';
+      applyLayout();
+      labelStatus.textContent = 'Loading labelled data…';
+      readSheetAsAOA(file, (err, aoa) => {
+        if (err) {
+          console.error(err);
+          labelStatus.textContent = 'Error reading file.';
+          return;
+        }
+        try {
+          parseLabelledAOA(aoa, file.name);
+        } catch (e) {
+          console.error(e);
+          labelStatus.textContent = 'Error in labelled data format: ' + e.message;
+        }
+      });
+    });
+
+    function parseLabelledAOA(aoa, fname) {
+      if (!aoa || aoa.length < 4) throw new Error('Need schema row, bias rows, header, data.');
+
+      const schemaRow = aoa[0];
+      D = parseInt(schemaRow[0],10);
+      B = parseInt(schemaRow[1],10);
+      if (!Number.isFinite(D) || !Number.isFinite(B) || D < 2 || B < 1) {
+        throw new Error('Row 1 must have valid D>=2 and B>=1.');
+      }
+
+      // Update headings with D
+      trainDimHead.textContent     = '(D = ' + D + ')';
+      trainPlotDimHead.textContent = '(D = ' + D + ')';
+
+      use3DTrain = (D === 3);
+      toggleTrainPlotMode();
+
+      const headerIndex = 1 + B;
+      const headerRow = (aoa[headerIndex] || []).map(h => h ?? '');
+      headerRowGlobal = headerRow;
+
+      const minCols = 3 + D + B + 1;
+      if (headerRow.length < minCols) {
+        throw new Error('Header row has too few columns.');
+      }
+
+      featureNamesTrain = headerRow.slice(3, 3 + D);
+
+      axisSummaryTop.textContent =
+        'Training schema: D = ' + D + ', B = ' + B +
+        '. Perceptron learns in full D-dim space. Use X/Y selectors for 2D projections.';
+
+      const scoreIdx = 3 + D + B;
+
+      biasNames = [];
+      for (let i = 0; i < B; i++) {
+        const hdr = headerRow[3 + D + i];
+        const nm = hdr && String(hdr).trim() !== '' ? String(hdr).trim() : ('bias' + (i+1));
+        biasNames.push(nm);
+      }
+
+      biasWeights = [];
+      biasBestW = [];
+      biasBestCorrect = [];
+      biasBestTotal = [];
+      biasIter = [];
+      biasConverged = [];
+      const biasVectorRows = aoa.slice(1, 1 + B);
+
+      for (let i = 0; i < B; i++) {
+        const row = biasVectorRows[i] || [];
+        const wArr = new Array(D+1).fill(0);
+        for (let j = 0; j <= D; j++) {
+          const cell = row[1 + j];
+          const num = Number(cell);
+          if (Number.isFinite(num)) wArr[j] = num;
+        }
+        biasWeights.push(wArr);
+        biasBestW.push(null);
+        biasBestCorrect.push(0);
+        biasBestTotal.push(0);
+        biasIter.push(0);
+        biasConverged.push(false);
+      }
+
+      const dataRowsRaw = aoa.slice(headerIndex+1)
+        .filter(r => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''));
+
+      labelledData = [];
+      const displayRows = [];
+
+      dataRowsRaw.forEach((row, idx) => {
+        const fullRow = [...row];
+        while (fullRow.length < minCols) fullRow.push('');
+
+        let seq = fullRow[0];
+        if (seq === undefined || seq === null || String(seq).trim() === '') {
+          seq = idx+1;
+          fullRow[0] = seq;
+        }
+        const id = fullRow[1];
+        const desc = fullRow[2];
+
+        const feats = fullRow.slice(3, 3+D).map(v => {
+          if (v === undefined || v === null || String(v).trim() === '') return null;
+          const num = Number(v);
+          return Number.isFinite(num) ? num : null;
+        });
+        const biases = fullRow.slice(3+D, 3+D+B);
+        labelledData.push({seq,id,desc,features:feats,biases});
+        displayRows.push(fullRow);
+      });
+
+      schemaInfo.textContent =
+        'D = ' + D + ', B = ' + B + ' | rows = ' + labelledData.length + ' | file: ' + fname;
+
+      renderLabelTable(headerRow, displayRows);
+
+      for (let i = 0; i < B; i++) {
+        biasBestCorrect[i] = 0;
+        biasBestTotal[i]   = labelledData.length;
+        biasIter[i]        = 0;
+        biasConverged[i]   = false;
+      }
+
+      biasSelect.innerHTML = '';
+      biasNames.forEach((nm,idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = (idx+1) + ': ' + nm;
+        biasSelect.appendChild(opt);
+      });
+      biasSelect.disabled = false;
+      currentBias = 0;
+      biasSelect.value = '0';
+
+      computeFeatureMeansTrain();
+
+      // initialise projection dims for training (first two features or fallback)
+      trainDimXIndex = 0;
+      trainDimYIndex = (D > 1) ? 1 : 0;
+      fillTrainDimSelectors();
+
+      syncStartInputsFromBias();
+      updateTrainAxisSummary();
+      updateStatsDisplay('Labelled data loaded.');
+
+      plotBtn.disabled = false;
+      writeTrainBtn.disabled = true;
+      stepBtn.disabled = false;
+      runBtn.disabled  = false;
+      drawVectorBtn.disabled = use3DTrain; // disabled if 3D
+
+      selectedIndex = null;
+      hidePopup();
+      boundsCache = null;
+      drawingVector = false;
+      drawClickPoints = [];
+
+      resizeCanvases();
+      renderTrainPlot();
+    }
+
+    function fillTrainDimSelectors() {
+      trainDimXSelect.innerHTML = '';
+      trainDimYSelect.innerHTML = '';
+      for (let d = 0; d < D; d++) {
+        const label = featureNamesTrain[d] || ('x' + (d+1));
+        const optX = document.createElement('option');
+        optX.value = String(d);
+        optX.textContent = (d+1) + ': ' + label;
+        const optY = optX.cloneNode(true);
+        trainDimXSelect.appendChild(optX);
+        trainDimYSelect.appendChild(optY);
+      }
+      trainDimXSelect.value = String(trainDimXIndex);
+      trainDimYSelect.value = String(trainDimYIndex);
+
+      // hide selectors in 3D mode (D=3) since training plot is in 3D
+      trainDimSelectors.style.display = use3DTrain ? 'none' : 'inline-flex';
+    }
+
+    trainDimXSelect.addEventListener('change', () => {
+      const idx = parseInt(trainDimXSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= D) return;
+      trainDimXIndex = idx;
+      if (trainDimYIndex === trainDimXIndex) {
+        trainDimYIndex = (trainDimXIndex + 1) % D;
+        trainDimYSelect.value = String(trainDimYIndex);
+      }
+      boundsCache = null;
+      updateTrainAxisSummary();
+      renderTrainPlot();
+    });
+
+    trainDimYSelect.addEventListener('change', () => {
+      const idx = parseInt(trainDimYSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= D) return;
+      trainDimYIndex = idx;
+      if (trainDimYIndex === trainDimXIndex) {
+        trainDimXIndex = (trainDimYIndex + 1) % D;
+        trainDimXSelect.value = String(trainDimXIndex);
+      }
+      boundsCache = null;
+      updateTrainAxisSummary();
+      renderTrainPlot();
+    });
+
+    function syncStartInputsFromBias() {
+      if (currentBias < 0 || currentBias >= biasWeights.length) return;
+      const w = biasWeights[currentBias] || new Array(D+1).fill(0);
+      startW0Input.value = Number.isFinite(w[0]) ? w[0] : 0;
+      startW1Input.value = Number.isFinite(w[1]) ? w[1] : 0;
+      startW2Input.value = Number.isFinite(w[2]) ? w[2] : 0;
+      startW3Input.value = Number.isFinite(w[3]) ? w[3] : 0;
+    }
+
+    function updateTrainAxisSummary() {
+      if (!featureNamesTrain.length || D == null) {
+        axisSummaryPlot.textContent = '2D training projection will appear here.';
+        return;
+      }
+      const nameX = featureNamesTrain[trainDimXIndex] || ('x' + (trainDimXIndex+1));
+      const nameY = featureNamesTrain[trainDimYIndex] || ('x' + (trainDimYIndex+1));
+      axisSummaryPlot.textContent =
+        '2D projection for bias "' + (biasNames[currentBias] || '') +
+        '" in dims: ' + nameX + ' (X) vs ' + nameY + ' (Y).';
+    }
+
+    biasSelect.addEventListener('change', () => {
+      const idx = parseInt(biasSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= B) return;
+      currentBias = idx;
+      syncStartInputsFromBias();
+      updateTrainAxisSummary();
+      updateStatsDisplay('Switched to bias: ' + biasNames[currentBias]);
+      renderTrainPlot();
+    });
+
+    labelTbody.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t.classList.contains('eye-icon')) return;
+      const idx = Number(t.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= labelledData.length) return;
+      selectedIndex = idx;
+      renderTrainPlot();
+    });
+
+    function clearTrainCanvas() {
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0,0,plotCanvas.width,plotCanvas.height);
+    }
+
+    function toCanvasCoordsTrain(x,y,bounds) {
+      const {minX,maxX,minY,maxY} = bounds;
+      const wCanvas = plotCanvas.width - 2*PADDING_2D;
+      const hCanvas = plotCanvas.height - 2*PADDING_2D;
+      const sx = (x - minX)/(maxX - minX);
+      const sy = (y - minY)/(maxY - minY);
+      const cx = PADDING_2D + sx*wCanvas;
+      const cy = plotCanvas.height - (PADDING_2D + sy*hCanvas);
+      return {cx,cy};
+    }
+
+    function fromCanvasToDataTrain(cx,cy,bounds) {
+      const {minX,maxX,minY,maxY} = bounds;
+      const wCanvas = plotCanvas.width - 2*PADDING_2D;
+      const hCanvas = plotCanvas.height - 2*PADDING_2D;
+      const sx = (cx - PADDING_2D)/wCanvas;
+      const sy = (plotCanvas.height - cy - PADDING_2D)/hCanvas;
+      const x = minX + sx*(maxX - minX);
+      const y = minY + sy*(maxY - minY);
+      return {x,y};
+    }
+
+    function drawAxesTrain(bounds) {
+      ctx.strokeStyle = '#4b5563';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PADDING_2D, plotCanvas.height - PADDING_2D);
+      ctx.lineTo(plotCanvas.width - PADDING_2D, plotCanvas.height - PADDING_2D);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(PADDING_2D, plotCanvas.height - PADDING_2D);
+      ctx.lineTo(PADDING_2D, PADDING_2D);
+      ctx.stroke();
+
+      const nameX = featureNamesTrain[trainDimXIndex] || ('x' + (trainDimXIndex+1));
+      const nameY = featureNamesTrain[trainDimYIndex] || ('x' + (trainDimYIndex+1));
+
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px system-ui';
+
+      ctx.textAlign = 'left';
+      ctx.fillText('X: ' + nameX + ' →',
+        plotCanvas.width - PADDING_2D - 140,
+        plotCanvas.height - PADDING_2D + 18);
+      ctx.fillText('↑ Y: ' + nameY,
+        PADDING_2D - 5,
+        PADDING_2D - 10);
+
+      ctx.textAlign = 'left';
+      ctx.fillText(bounds.minX.toFixed(2),
+        PADDING_2D,
+        plotCanvas.height - PADDING_2D + 12);
+      ctx.textAlign = 'right';
+      ctx.fillText(bounds.maxX.toFixed(2),
+        plotCanvas.width - PADDING_2D,
+        plotCanvas.height - PADDING_2D + 12);
+
+      ctx.textAlign = 'right';
+      ctx.fillText(bounds.minY.toFixed(2),
+        PADDING_2D - 6,
+        plotCanvas.height - PADDING_2D);
+      ctx.fillText(bounds.maxY.toFixed(2),
+        PADDING_2D - 6,
+        PADDING_2D + 4);
+
+      if (biasNames.length > 0) {
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 13px system-ui';
+        ctx.fillStyle = '#f97316';
+        ctx.fillText('Bias: ' + biasNames[currentBias],
+          plotCanvas.width - PADDING_2D + 4,
+          PADDING_2D + 2);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    function drawPointsTrain(bounds) {
+      pointScreenPositions = [];
+      for (let i = 0; i < labelledData.length; i++) {
+        const row = labelledData[i];
+        const x = row.features[trainDimXIndex];
+        const y = row.features[trainDimYIndex];
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        const {cx,cy} = toCanvasCoordsTrain(x,y,bounds);
+        pointScreenPositions.push({cx,cy,index:i});
+        ctx.beginPath();
+        ctx.arc(cx,cy,5,0,2*Math.PI);
+        const labRaw = row.biases[currentBias];
+        const lab01 = Number(labRaw) === 1 ? 1 : 0;
+        ctx.fillStyle = lab01 === 1 ? '#22c55e' : '#ef4444';
+        ctx.fill();
+      }
+    }
+
+    function projectedWeights2DGeneric(fullW, Dlocal, dimX, dimY, means) {
+      if (!fullW || fullW.length < Dlocal+1) return null;
+      let C = fullW[0];
+      for (let k = 0; k < Dlocal; k++) {
+        if (k === dimX || k === dimY) continue;
+        const mk = Number(means[k]) || 0;
+        C += fullW[1+k]*mk;
+      }
+      const wx = fullW[1+dimX];
+      const wy = fullW[1+dimY];
+      if (!Number.isFinite(wx) || !Number.isFinite(wy)) return null;
+      return [C, wx, wy];
+    }
+
+    function drawLineForWTrain(fullW,bounds,color,width,dashed) {
+      const proj = projectedWeights2DGeneric(fullW, D, trainDimXIndex, trainDimYIndex, trainFeatureMeans);
+      if (!proj) return;
+      const w0 = proj[0], w1 = proj[1], w2 = proj[2];
+      if ((w1 === 0 && w2 === 0) || !Number.isFinite(w0)) return;
+
+      ctx.setLineDash(dashed ? [6,4] : []);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+
+      const {minX,maxX,minY,maxY} = bounds;
+      ctx.beginPath();
+      if (Math.abs(w2) > 1e-8) {
+        const xA = minX;
+        const yA = -(w0 + w1*xA)/w2;
+        const xB = maxX;
+        const yB = -(w0 + w1*xB)/w2;
+        const A = toCanvasCoordsTrain(xA,yA,bounds);
+        const B = toCanvasCoordsTrain(xB,yB,bounds);
+        ctx.moveTo(A.cx,A.cy);
+        ctx.lineTo(B.cx,B.cy);
+      } else {
+        const xV = -w0/w1;
+        const A = toCanvasCoordsTrain(xV,minY,bounds);
+        const B = toCanvasCoordsTrain(xV,maxY,bounds);
+        ctx.moveTo(A.cx,A.cy);
+        ctx.lineTo(B.cx,B.cy);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function drawHeatmapTrain(bounds) {
+      const fullW = biasWeights[currentBias];
+      const proj = projectedWeights2DGeneric(fullW, D, trainDimXIndex, trainDimYIndex, trainFeatureMeans);
+      if (!proj) return;
+      const w0 = proj[0], w1 = proj[1], w2 = proj[2];
+      if (w1 === 0 && w2 === 0) return;
+
+      const {minX,maxX,minY,maxY} = bounds;
+      const width = plotCanvas.width;
+      const height = plotCanvas.height;
+      const gridX = 80, gridY = 80;
+      const stepX = (maxX - minX)/gridX;
+      const stepY = (maxY - minY)/gridY;
+
+      for (let i = 0; i < gridX; i++) {
+        for (let j = 0; j < gridY; j++) {
+          const x = minX + (i+0.5)*stepX;
+          const y = minY + (j+0.5)*stepY;
+          const score = w0 + w1*x + w2*y;
+          const mag = Math.tanh(Math.abs(score)/5);
+          const alpha = 0.08 + 0.22*mag;
+          let r,g,b;
+          if (score >= 0) { r=34;  g=197; b=94; }
+          else            { r=239; g=68;  b=68; }
+          ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+
+          const x0 = PADDING_2D + ((x - minX)/(maxX - minX))*(width - 2*PADDING_2D);
+          const y0 = height - (PADDING_2D + ((y - minY)/(maxY - minY))*(height - 2*PADDING_2D));
+          const cellW = (width - 2*PADDING_2D)/gridX;
+          const cellH = (height - 2*PADDING_2D)/gridY;
+          ctx.fillRect(x0,y0,cellW+1,cellH+1);
+        }
+      }
+    }
+
+    function renderTrainPlot2D() {
+      clearTrainCanvas();
+      if (labelledData.length === 0) return;
+
+      let bounds;
+      if (cameraLocked && boundsCache) bounds = boundsCache;
+      else {
+        bounds = computeBounds2D(labelledData, trainDimXIndex, trainDimYIndex);
+        boundsCache = bounds;
+      }
+      lastBounds = bounds;
+
+      if (showHeatmap) drawHeatmapTrain(bounds);
+      drawAxesTrain(bounds);
+      drawPointsTrain(bounds);
+
+      const wCur = biasWeights[currentBias];
+      const wBest = biasBestW[currentBias];
+
+      if (wBest) {
+        drawLineForWTrain(wBest,bounds,'#eab308',2,true);
+      }
+      if (wCur) {
+        drawLineForWTrain(wCur,bounds,'#06b6d4',2,false);
+      }
+
+      if (selectedIndex !== null &&
+          selectedIndex >= 0 &&
+          selectedIndex < labelledData.length &&
+          blinkState) {
+        const pt = pointScreenPositions.find(p => p.index === selectedIndex);
+        if (pt) {
+          ctx.beginPath();
+          ctx.arc(pt.cx,pt.cy,7.5,0,2*Math.PI);
+          ctx.fillStyle = '#eab308';
+          ctx.fill();
+        }
+      }
+
+      axis3DInfoDiv.style.display = 'none';
+    }
+
+    function initTrain3D() {
+      if (trainScene) return;
+      const rect = plot3DContainer.getBoundingClientRect();
+      const w = Math.max(200, rect.width || 400);
+      const h = Math.max(200, rect.height || 300);
+
+      trainScene = new THREE.Scene();
+      trainScene.background = new THREE.Color(0x020617);
+
+      trainCamera = new THREE.PerspectiveCamera(35, w/h, 0.1, 5000);
+      trainCamera.position.set(5,5,5);
+
+      trainRenderer = new THREE.WebGLRenderer({antialias:true});
+      trainRenderer.setSize(w,h);
+      plot3DContainer.innerHTML = '';
+      plot3DContainer.appendChild(trainRenderer.domElement);
+
+      const light = new THREE.DirectionalLight(0xffffff,0.9);
+      light.position.set(8,10,8);
+      trainScene.add(light);
+      const amb = new THREE.AmbientLight(0xffffff,0.4);
+      trainScene.add(amb);
+
+      trainPointsGroup = new THREE.Group();
+      trainScene.add(trainPointsGroup);
+
+      trainAxesHelper = null;
+      trainLastSpan = null;
+
+      raycaster = new THREE.Raycaster();
+      mouseVector = new THREE.Vector2();
+
+      plot3DContainer.addEventListener('click', onTrain3DClick);
+
+      animateTrain3D();
+    }
+
+    function animateTrain3D() {
+      requestAnimationFrame(animateTrain3D);
+      if (trainRenderer && trainScene && trainCamera) {
+        trainRenderer.render(trainScene,trainCamera);
+      }
+    }
+
+    function buildTrainPopupHTML(idx) {
+      const row = labelledData[idx];
+      if (!row) return '';
+      const labRaw = row.biases[currentBias];
+      const lab01 = Number(labRaw) === 1 ? 1 : 0;
+      const nameX = featureNamesTrain[trainDimXIndex] || ('x' + (trainDimXIndex+1));
+      const nameY = featureNamesTrain[trainDimYIndex] || ('x' + (trainDimYIndex+1));
+      return (
+        '<strong>Point #' + (idx+1) + '</strong><br>' +
+        'Seq: ' + row.seq + '<br>' +
+        'ID: ' + (row.id ?? '') + '<br>' +
+        'Desc: ' + (row.desc ?? '') + '<br>' +
+        'X (' + nameX + '): ' + row.features[trainDimXIndex] + '<br>' +
+        'Y (' + nameY + '): ' + row.features[trainDimYIndex] + '<br>' +
+        'label (' + biasNames[currentBias] + '): ' + lab01
+      );
+    }
+
+    function makePlaneMesh3D(w,bounds,colorHex,opacity,edgeColorHex) {
+      const w0 = w[0], w1 = w[1], w2 = w[2], w3 = w[3];
+      if (!Number.isFinite(w0) || !Number.isFinite(w1) ||
+          !Number.isFinite(w2) || !Number.isFinite(w3)) return null;
+
+      const normal = [w1,w2,w3];
+      const absN = normal.map(Math.abs);
+      const maxIdx = absN[0]>=absN[1] && absN[0]>=absN[2] ? 0 :
+                     absN[1]>=absN[2] ? 1 : 2;
+
+      const {minX,maxX,minY,maxY,minZ,maxZ} = bounds;
+      let corners = [];
+
+      if (maxIdx === 2) {
+        const pts = [
+          [minX,minY],
+          [maxX,minY],
+          [maxX,maxY],
+          [minX,maxY]
+        ];
+        for (const [x,y] of pts) {
+          const z = -(w0 + w1*x + w2*y)/w3;
+          corners.push(new THREE.Vector3(x,y,z));
+        }
+      } else if (maxIdx === 1) {
+        const pts = [
+          [minX,minZ],
+          [maxX,minZ],
+          [maxX,maxZ],
+          [minX,maxZ]
+        ];
+        for (const [x,z] of pts) {
+          const y = -(w0 + w1*x + w3*z)/w2;
+          corners.push(new THREE.Vector3(x,y,z));
+        }
+      } else {
+        const pts = [
+          [minY,minZ],
+          [maxY,minZ],
+          [maxY,maxZ],
+          [minY,maxZ]
+        ];
+        for (const [y,z] of pts) {
+          const x = -(w0 + w2*y + w3*z)/w1;
+          corners.push(new THREE.Vector3(x,y,z));
+        }
+      }
+
+      const geom = new THREE.BufferGeometry().setFromPoints([
+        corners[0], corners[1], corners[2],
+        corners[0], corners[2], corners[3]
+      ]);
+      const mat = new THREE.MeshStandardMaterial({
+        color: colorHex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: opacity
+      });
+      const mesh = new THREE.Mesh(geom,mat);
+
+      const edges = new THREE.EdgesGeometry(geom);
+      const line = new THREE.LineSegments(
+        edges,
+        new THREE.LineBasicMaterial({ color: edgeColorHex ?? 0xffffff, linewidth: 1 })
+      );
+      mesh.add(line);
+
+      return mesh;
+    }
+
+    function showPopupForIndex(idx,xCanvas,yCanvas) {
+      const html = buildTrainPopupHTML(idx);
+      if (!html) return;
+      pointPopup.innerHTML = html;
+
+      const wrapperRect = plotCanvas.parentElement.getBoundingClientRect();
+      const canvasRect  = plotCanvas.getBoundingClientRect();
+      const offsetX = canvasRect.left - wrapperRect.left;
+      const offsetY = canvasRect.top  - wrapperRect.top;
+
+      const left = xCanvas + offsetX + 8;
+      const top  = yCanvas + offsetY - 8;
+      pointPopup.style.left = left + 'px';
+      pointPopup.style.top  = top + 'px';
+      pointPopup.style.display = 'block';
+      popupIndex = idx;
+    }
+
+    function hidePopup() {
+      pointPopup.style.display = 'none';
+      popupIndex = null;
+    }
+
+    function showPopupForIndex3D(idx, clientX, clientY) {
+      const html = buildTrainPopupHTML(idx);
+      if (!html) return;
+      pointPopup.innerHTML = html;
+
+      const wrapperRect = plot3DContainer.parentElement.getBoundingClientRect();
+      const left = clientX - wrapperRect.left + 8;
+      const top  = clientY - wrapperRect.top - 8;
+      pointPopup.style.left = left + 'px';
+      pointPopup.style.top  = top + 'px';
+      pointPopup.style.display = 'block';
+      popupIndex = idx;
+    }
+
+    function renderTrainPlot3D() {
+      if (!trainScene || labelledData.length === 0) return;
+
+      if (trainPointsGroup) {
+        while (trainPointsGroup.children.length > 0) {
+          trainPointsGroup.remove(trainPointsGroup.children[0]);
+        }
+      }
+
+      const boundsWorld = computeBounds3D(labelledData);
+      const cx = 0.5*(boundsWorld.minX + boundsWorld.maxX);
+      const cy = 0.5*(boundsWorld.minY + boundsWorld.maxY);
+      const cz = 0.5*(boundsWorld.minZ + boundsWorld.maxZ);
+
+      const dx = boundsWorld.maxX - boundsWorld.minX || 1;
+      const dy = boundsWorld.maxY - boundsWorld.minY || 1;
+      const dz = boundsWorld.maxZ - boundsWorld.minZ || 1;
+      const maxSpan = Math.max(dx,dy,dz);
+
+      if (!trainAxesHelper || trainLastSpan === null || Math.abs(trainLastSpan - maxSpan) > 1e-6) {
+        if (trainAxesHelper) trainScene.remove(trainAxesHelper);
+        trainAxesHelper = new THREE.AxesHelper(maxSpan*0.8);
+        trainScene.add(trainAxesHelper);
+        trainLastSpan = maxSpan;
+      }
+
+      let radius = maxSpan * 0.04;
+      radius = Math.min(Math.max(radius, 0.08), 0.6);
+      const sphereGeom = new THREE.SphereGeometry(radius,16,16);
+
+      for (let i = 0; i < labelledData.length; i++) {
+        const row = labelledData[i];
+        const x = Number(row.features[0]);
+        const y = Number(row.features[1]);
+        const z = Number(row.features[2]);
+        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue;
+
+        const labRaw = row.biases[currentBias];
+        const lab01 = Number(labRaw) === 1 ? 1 : 0;
+
+        let color;
+        if (selectedIndex === i && blinkState) {
+          color = 0xeab308;
+        } else {
+          color = lab01 === 1 ? 0x22c55e : 0xef4444;
+        }
+
+        const mat = new THREE.MeshStandardMaterial({color});
+        const sph = new THREE.Mesh(sphereGeom,mat);
+        sph.position.set(x - cx, y - cy, z - cz);
+        sph.userData.index = i;
+        trainPointsGroup.add(sph);
+      }
+
+      if (trainPlaneCurrent) {
+        trainScene.remove(trainPlaneCurrent);
+        trainPlaneCurrent = null;
+      }
+      if (trainPlaneBest) {
+        trainScene.remove(trainPlaneBest);
+        trainPlaneBest = null;
+      }
+
+      trainBoundsLocal = {
+        minX: boundsWorld.minX - cx,
+        maxX: boundsWorld.maxX - cx,
+        minY: boundsWorld.minY - cy,
+        maxY: boundsWorld.maxY - cy,
+        minZ: boundsWorld.minZ - cz,
+        maxZ: boundsWorld.maxZ - cz
+      };
+
+      const wCur = biasWeights[currentBias];
+      if (wCur && wCur.length >= 4) {
+        const wDisp = [
+          wCur[0] + wCur[1]*cx + wCur[2]*cy + wCur[3]*cz,
+          wCur[1],
+          wCur[2],
+          wCur[3]
+        ];
+        const mesh = makePlaneMesh3D(wDisp,trainBoundsLocal,0x06b6d4,0.6,0xffffff);
+        if (mesh) {
+          trainPlaneCurrent = mesh;
+          trainScene.add(trainPlaneCurrent);
+        }
+      }
+
+      const bestW = biasBestW[currentBias];
+      if (bestW && bestW.length >= 4) {
+        const wDispB = [
+          bestW[0] + bestW[1]*cx + bestW[2]*cy + bestW[3]*cz,
+          bestW[1],
+          bestW[2],
+          bestW[3]
+        ];
+        const meshB = makePlaneMesh3D(wDispB,trainBoundsLocal,0xeab308,0.35,0xeab308);
+        if (meshB) {
+          trainPlaneBest = meshB;
+          trainScene.add(trainPlaneBest);
+        }
+      }
+
+      if (trainCamera) {
+        const dist = 0.9 * maxSpan + 2 * radius;
+        trainCamera.position.set(dist, dist, dist);
+        trainCamera.lookAt(new THREE.Vector3(0,0,0));
+        trainCamera.updateProjectionMatrix();
+      }
+
+      axis3DInfoDiv.style.display = 'block';
+      axis3DInfoDiv.textContent =
+        '3D axis ranges: ' +
+        'x₁ [' + boundsWorld.minX.toFixed(2) + ', ' + boundsWorld.maxX.toFixed(2) + '], ' +
+        'x₂ [' + boundsWorld.minY.toFixed(2) + ', ' + boundsWorld.maxY.toFixed(2) + '], ' +
+        'x₃ [' + boundsWorld.minZ.toFixed(2) + ', ' + boundsWorld.maxZ.toFixed(2) + ']';
+    }
+
+    function renderTrainPlot() {
+      if (use3DTrain) renderTrainPlot3D();
+      else renderTrainPlot2D();
+    }
+
+    plotCanvas.addEventListener('click', (e) => {
+      if (use3DTrain) return;
+      if (isRunning) return;
+
+      const rect = plotCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (drawingVector) {
+        if (!lastBounds) return;
+        const dataPt = fromCanvasToDataTrain(x,y,lastBounds);
+        drawClickPoints.push(dataPt);
+        if (drawClickPoints.length === 1) {
+          labelStatus.textContent = 'First point captured. Click second point.';
+        } else if (drawClickPoints.length === 2) {
+          const p1 = drawClickPoints[0];
+          const p2 = drawClickPoints[1];
+          const w1 = p2.y - p1.y;
+          const w2 = p1.x - p2.x;
+          const w0 = p2.x*p1.y - p1.x*p2.y;
+          const norm = Math.sqrt(w1*w1 + w2*w2) || 1;
+          const newW0 = w0/norm;
+          const newW1 = w1/norm;
+          const newW2 = w2/norm;
+
+          const w = biasWeights[currentBias].slice();
+          w[0] = newW0;
+          w[1+trainDimXIndex] = newW1;
+          w[1+trainDimYIndex] = newW2;
+          biasWeights[currentBias] = w;
+
+          drawingVector = false;
+          drawClickPoints = [];
+          syncStartInputsFromBias();
+          maybeUpdateBest(currentBias);
+          updateStatsDisplay('Current w set from drawn line (projection).');
+          renderTrainPlot();
+        }
+        return;
+      }
+
+      let bestIdx = null;
+      let bestDist = Infinity;
+      const R = 10;
+      for (const p of pointScreenPositions) {
+        const dx = p.cx - x;
+        const dy = p.cy - y;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < bestDist && d2 <= R*R) {
+          bestDist = d2;
+          bestIdx  = p;
+        }
+      }
+      if (!bestIdx) {
+        hidePopup();
+        selectedIndex = null;
+        renderTrainPlot();
+        return;
+      }
+      selectedIndex = bestIdx.index;
+      showPopupForIndex(bestIdx.index,bestIdx.cx,bestIdx.cy);
+      renderTrainPlot();
+    });
+
+    function onTrain3DClick(e) {
+      if (!use3DTrain || !trainRenderer || !trainCamera || !raycaster || !trainPointsGroup) return;
+      if (isRunning) return;
+
+      const rect = trainRenderer.domElement.getBoundingClientRect();
+      mouseVector.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseVector.y = - ((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouseVector, trainCamera);
+      const intersects = raycaster.intersectObjects(trainPointsGroup.children, true);
+      if (!intersects.length) {
+        hidePopup();
+        selectedIndex = null;
+        renderTrainPlot();
+        return;
+      }
+
+      const hit = intersects[0].object;
+      const idx = (hit.userData && typeof hit.userData.index === 'number')
+        ? hit.userData.index
+        : null;
+      if (idx === null) return;
+
+      selectedIndex = idx;
+      showPopupForIndex3D(idx, e.clientX, e.clientY);
+      renderTrainPlot();
+    }
+
+    function getStartVector() {
+      const w0 = parseFloat(startW0Input.value);
+      const w1 = parseFloat(startW1Input.value);
+      const w2 = parseFloat(startW2Input.value);
+      const w3 = parseFloat(startW3Input.value);
+      const w = new Array(D+1).fill(0);
+      w[0] = Number.isFinite(w0) ? w0 : 0;
+      if (D >= 1) w[1] = Number.isFinite(w1) ? w1 : 0;
+      if (D >= 2) w[2] = Number.isFinite(w2) ? w2 : 0;
+      if (D >= 3) w[3] = Number.isFinite(w3) ? w3 : 0;
+      return w;
+    }
+
+    plotBtn.addEventListener('click', () => {
+      if (labelledData.length === 0 || biasWeights.length === 0) {
+        labelStatus.textContent = 'Load labelled data first.';
+        return;
+      }
+      activeSection = 'learning';
+      applyLayout();
+      biasWeights[currentBias] = getStartVector();
+      biasIter[currentBias] = 0;
+      biasConverged[currentBias] = false;
+
+      if (runIntervalId !== null) {
+        clearInterval(runIntervalId);
+        runIntervalId = null;
+      }
+      isRunning = false;
+      runBtn.textContent = 'Run ▶';
+
+      stepBtn.disabled = false;
+      runBtn.disabled  = false;
+      writeTrainBtn.disabled = false;
+      drawVectorBtn.disabled = use3DTrain;
+
+      selectedIndex = null;
+      hidePopup();
+      boundsCache = null;
+      drawingVector = false;
+      drawClickPoints = [];
+
+      maybeUpdateBest(currentBias);
+      updateStatsDisplay('Perceptron reset for ' + biasNames[currentBias] + '.');
+      renderTrainPlot();
+    });
+
+    stepBtn.addEventListener('click', () => {
+      if (labelledData.length === 0) return;
+      activeSection = 'learning';
+      applyLayout();
+      if (biasConverged[currentBias]) {
+        labelStatus.textContent = 'Bias already converged.';
+        return;
+      }
+      if (isRunning) {
+        isRunning = false;
+        if (runIntervalId !== null) {
+          clearInterval(runIntervalId);
+          runIntervalId = null;
+        }
+        runBtn.textContent = 'Run ▶';
+      }
+      biasIter[currentBias]++;
+      const res = perceptronStep(currentBias);
+      maybeUpdateBest(currentBias);
+      updateStatsDisplay(res.converged ? 'Converged on step.' : 'Step executed.');
+      renderTrainPlot();
+      if (res.converged) {
+        stepBtn.disabled = true;
+        runBtn.disabled  = true;
+      }
+    });
+
+    runBtn.addEventListener('click', () => {
+      if (labelledData.length === 0) return;
+      activeSection = 'learning';
+      applyLayout();
+      if (biasConverged[currentBias]) {
+        labelStatus.textContent = 'Bias already converged.';
+        return;
+      }
+      if (!isRunning) {
+        isRunning = true;
+        runBtn.textContent = 'Pause ⏸';
+        runIntervalId = setInterval(() => {
+          if (biasConverged[currentBias]) {
+            isRunning = false;
+            clearInterval(runIntervalId);
+            runIntervalId = null;
+            runBtn.textContent = 'Run ▶';
+            stepBtn.disabled = true;
+            runBtn.disabled  = true;
+            return;
+          }
+          biasIter[currentBias]++;
+          const res = perceptronStep(currentBias);
+          maybeUpdateBest(currentBias);
+          updateStatsDisplay(res.converged ? 'Converged during Run.' : '');
+          renderTrainPlot();
+          if (res.converged) {
+            isRunning = false;
+            clearInterval(runIntervalId);
+            runIntervalId = null;
+            runBtn.textContent = 'Run ▶';
+            stepBtn.disabled = true;
+            runBtn.disabled  = true;
+          }
+        }, 10);
+      } else {
+        isRunning = false;
+        runBtn.textContent = 'Run ▶';
+        if (runIntervalId !== null) {
+          clearInterval(runIntervalId);
+          runIntervalId = null;
+        }
+      }
+    });
+
+    drawVectorBtn.addEventListener('click', () => {
+      if (use3DTrain) {
+        labelStatus.textContent = 'Draw vector is only for 2D (2D projection mode).';
+        return;
+      }
+      if (labelledData.length === 0) {
+        labelStatus.textContent = 'Load and plot data first.';
+        return;
+      }
+      if (isRunning) {
+        labelStatus.textContent = 'Pause Run before drawing.';
+        return;
+      }
+      activeSection = 'learning';
+      applyLayout();
+      if (drawingVector) {
+        drawingVector = false;
+        drawClickPoints = [];
+        labelStatus.textContent = 'Draw vector cancelled.';
+      } else {
+        drawingVector = true;
+        drawClickPoints = [];
+        hidePopup();
+        labelStatus.textContent = 'Draw vector: click two points on the 2D projection.';
+      }
+    });
+
+    lockCameraCheckbox.addEventListener('change', () => {
+      cameraLocked = lockCameraCheckbox.checked;
+      if (!cameraLocked) boundsCache = null;
+      if (!use3DTrain) renderTrainPlot();
+    });
+
+    heatmapCheckbox.addEventListener('change', () => {
+      showHeatmap = heatmapCheckbox.checked;
+      if (!use3DTrain) renderTrainPlot();
+    });
+
+    function toggleTrainPlotMode() {
+      if (use3DTrain) {
+        plotCanvas.style.display = 'none';
+        plot3DContainer.style.display = 'block';
+        lockCameraWrapper.style.display = 'none';
+        heatmapWrapper.style.display = 'none';
+        drawVectorBtn.disabled = true;
+        trainDimSelectors.style.display = 'none';
+        initTrain3D();
+      } else {
+        plot3DContainer.style.display = 'none';
+        plotCanvas.style.display = 'block';
+        lockCameraWrapper.style.display = 'inline-flex';
+        heatmapWrapper.style.display = 'inline-flex';
+        drawVectorBtn.disabled = false;
+        trainDimSelectors.style.display = 'inline-flex';
+      }
+    }
+
+    function evaluateAccuracy(weights,biasIdx) {
+      if (labelledData.length === 0) return {correct:0,total:0};
+      let correct = 0;
+      const total = labelledData.length;
+      for (const row of labelledData) {
+        const x = row.features;
+        if (!x || x.length < D) continue;
+        const labRaw = row.biases[biasIdx];
+        const lab01 = Number(labRaw) === 1 ? 1 : 0;
+        const y = lab01 === 1 ? 1 : -1;
+        let score = weights[0];
+        for (let d = 0; d < D; d++) {
+          const xv = Number(x[d]);
+          if (!Number.isFinite(xv)) continue;
+          score += weights[1+d]*xv;
+        }
+        const pred = score >= 0 ? 1 : -1;
+        if (pred === y) correct++;
+      }
+      return {correct,total};
+    }
+
+    function updateStatsDisplay(msg) {
+      if (biasWeights.length === 0) {
+        currentStatsDiv.textContent = 'No bias selected.';
+        bestStatsDiv.textContent = '';
+        if (msg) labelStatus.textContent = msg;
+        return;
+      }
+      const w = biasWeights[currentBias];
+      const iter = biasIter[currentBias];
+      const accObj = evaluateAccuracy(w,currentBias);
+      const correct = accObj.correct;
+      const total = accObj.total;
+      const acc = total>0 ? (100*correct/total).toFixed(1) : '0.0';
+
+      const bestW   = biasBestW[currentBias];
+      const bestCor = biasBestCorrect[currentBias];
+      const bestTot = biasBestTotal[currentBias];
+      const wStr = w.map(v => Number.isFinite(v) ? v.toFixed(3) : 'NaN').join(', ');
+
+      currentStatsDiv.innerHTML =
+        '<span style="color:#06b6d4;">CURRENT (' + biasNames[currentBias] + ') w = [' +
+        wStr + ']</span><br>' +
+        'iters = ' + iter + ' · acc (current) = ' + correct + '/' + total + ' (' + acc + '%)';
+
+      if (!bestW) {
+        bestStatsDiv.innerHTML =
+          '<span style="color:#eab308;">BEST (' + biasNames[currentBias] + ') w = [–]</span><br>' +
+          'matches = 0 / ' + total + ' (0.0%)';
+      } else {
+        const bestWStr = bestW.map(v => Number.isFinite(v)?v.toFixed(3):'NaN').join(', ');
+        const bestAcc = bestTot>0 ? (100*bestCor/bestTot).toFixed(1) : '0.0';
+        bestStatsDiv.innerHTML =
+          '<span style="color:#eab308;">BEST (' + biasNames[currentBias] + ') w = [' +
+          bestWStr + ']</span><br>' +
+          'matches = ' + bestCor + ' / ' + bestTot + ' (' + bestAcc + '%)';
+      }
+      if (msg) labelStatus.textContent = msg;
+    }
+
+    function maybeUpdateBest(biasIdx) {
+      const w = biasWeights[biasIdx];
+      const accObj = evaluateAccuracy(w,biasIdx);
+      const correct = accObj.correct;
+      const total   = accObj.total;
+      if (!biasBestW[biasIdx] || correct > biasBestCorrect[biasIdx]) {
+        biasBestW[biasIdx] = w.slice();
+        biasBestCorrect[biasIdx] = correct;
+        biasBestTotal[biasIdx] = total;
+      }
+    }
+
+    function perceptronStep(biasIdx) {
+      const w = biasWeights[biasIdx];
+      if (!w) return { converged: true };
+
+      let anyWrong = false;
+      let wrongIdx = -1;
+      let wrongY   = 0;
+      let wrongX   = null;
+
+      for (let i = 0; i < labelledData.length; i++) {
+        const row = labelledData[i];
+        const x = row.features;
+        if (!x || x.length < D) continue;
+
+        const labRaw = row.biases[biasIdx];
+        const lab01 = Number(labRaw) === 1 ? 1 : 0;
+        const y = lab01 === 1 ? 1 : -1;
+
+        let score = w[0];
+        for (let d = 0; d < D; d++) {
+          const xv = Number(x[d]);
+          if (!Number.isFinite(xv)) continue;
+          score += w[1+d]*xv;
+        }
+
+        if (y * score <= 0) {
+          anyWrong = true;
+          wrongIdx = i;
+          wrongY   = y;
+          wrongX   = x.slice();
+          break;
+        }
+      }
+
+      if (!anyWrong) {
+        biasConverged[biasIdx] = true;
+        return { converged: true };
+      }
+
+      w[0] += wrongY;
+      for (let d = 0; d < D; d++) {
+        const xv = Number(wrongX[d]);
+        if (!Number.isFinite(xv)) continue;
+        w[1+d] += wrongY * xv;
+      }
+      biasWeights[biasIdx] = w;
+      biasConverged[biasIdx] = false;
+      return { converged: false };
+    }
+
+    writeTrainBtn.addEventListener('click', () => {
+      if (!headerRowGlobal || biasWeights.length === 0) {
+        alert('No training data.');
+        return;
+      }
+      const filename = prompt('Enter training output filename','xlm_train_output.xlsx')
+        || 'xlm_train_output.xlsx';
+      const aoa = [];
+      aoa.push([D,B]);
+
+      for (let i = 0; i < B; i++) {
+        const row = [];
+        row[0] = biasNames[i];
+        const w = biasBestW[i] || biasWeights[i] || new Array(D+1).fill(0);
+        for (let j = 0; j <= D; j++) row[1+j] = w[j];
+        aoa.push(row);
+      }
+
+      const minCols = 3 + D + B + 1;
+      const scoreIdx = 3 + D + B;
+      const headerOut = headerRowGlobal.slice();
+      while (headerOut.length < minCols) headerOut.push('');
+      if (!headerOut[scoreIdx] || String(headerOut[scoreIdx]).trim() === '') {
+        headerOut[scoreIdx] = 'Score';
+      }
+      aoa.push(headerOut);
+
+      labelledData.forEach(ld => {
+        const row = new Array(minCols).fill('');
+        row[0] = ld.seq;
+        row[1] = ld.id;
+        row[2] = ld.desc;
+        for (let j = 0; j < D; j++) row[3+j] = ld.features[j];
+        let scoreSum = 0;
+        for (let k = 0; k < B; k++) {
+          const val = Number(ld.biases[k]) === 1 ? 1 : 0;
+          row[3+D+k] = val;
+          scoreSum += val;
+        }
+        row[scoreIdx] = scoreSum;
+        aoa.push(row);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+      XLSX.writeFile(wb, filename);
+    });
+
+    classFileInput.addEventListener('change', () => {
+      const file = classFileInput.files[0];
+      if (!file) return;
+      activeSection = 'classify';
+      applyLayout();
+      classStatus.textContent = 'Loading classification data…';
+      readSheetAsAOA(file, (err, aoa) => {
+        if (err) {
+          console.error(err);
+          classStatus.textContent = 'Error reading file.';
+          return;
+        }
+        try {
+          parseClassificationAOA(aoa,file.name);
+        } catch (e) {
+          console.error(e);
+          classStatus.textContent = 'Error in classification data format: ' + e.message;
+        }
+      });
+    });
+
+    function parseClassificationAOA(aoa,fname) {
+      if (!aoa || aoa.length < 4) throw new Error('Need schema row, bias rows, header, data.');
+
+      const schemaRow = aoa[0];
+      classD = parseInt(schemaRow[0],10);
+      classB = parseInt(schemaRow[1],10);
+      if (!Number.isFinite(classD) || !Number.isFinite(classB) || classD < 2 || classB < 1) {
+        throw new Error('Row 1 must have valid D>=2 and B>=1.');
+      }
+
+      // Update headings with D for classification
+      classDimHead.textContent     = '(D = ' + classD + ')';
+      classPlotDimHead.textContent = '(D = ' + classD + ')';
+
+      const headerIndex = 1 + classB;
+      const headerRow = (aoa[headerIndex] || []).map(h => h ?? '');
+      classHeaderRow = headerRow;
+
+      const minCols = 3 + classD + classB + 1;
+      if (headerRow.length < minCols) throw new Error('Header row has too few columns.');
+
+      const scoreIdx = 3 + classD + classB;
+
+      featureNamesClass = headerRow.slice(3,3+classD);
+
+      classBiasNames = [];
+      for (let i = 0; i < classB; i++) {
+        const hdr = headerRow[3 + classD + i];
+        const nm = hdr && String(hdr).trim() !== '' ? String(hdr).trim() : ('bias' + (i+1));
+        classBiasNames.push(nm);
+      }
+
+      classBiasWeights = [];
+      const biasRows = aoa.slice(1,1+classB);
+      for (let i = 0; i < classB; i++) {
+        const row = biasRows[i] || [];
+        const wArr = new Array(classD+1).fill(0);
+        for (let j = 0; j <= classD; j++) {
+          const cell = row[1+j];
+          const num  = Number(cell);
+          if (Number.isFinite(num)) wArr[j] = num;
+        }
+        classBiasWeights.push(wArr);
+      }
+
+      const dataRowsRaw = aoa.slice(headerIndex+1)
+        .filter(r => r.some(c => c !== undefined && c !== null && String(c).trim() !== ''));
+
+      classData = [];
+      const displayRows = [];
+
+      dataRowsRaw.forEach((row,idx) => {
+        const fullRow = [...row];
+        while (fullRow.length < minCols) fullRow.push('');
+        let seq = fullRow[0];
+        if (seq === undefined || seq === null || String(seq).trim() === '') {
+          seq = idx+1;
+          fullRow[0] = seq;
+        }
+        const id = fullRow[1];
+        const desc = fullRow[2];
+
+        const feats = fullRow.slice(3,3+classD).map(v => {
+          if (v === undefined || v === null || String(v).trim() === '') return null;
+          const num = Number(v);
+          return Number.isFinite(num) ? num : null;
+        });
+        const biases = fullRow.slice(3+classD, 3+classD+classB).map(v => {
+          if (v === undefined || v === null || String(v).trim() === '') return '';
+          return v;
+        });
+        const scoreVal = fullRow[scoreIdx];
+        classData.push({seq,id,desc,features:feats,biases,score:scoreVal});
+        displayRows.push(fullRow);
+      });
+
+      classSchemaInfo.textContent =
+        'D = ' + classD + ', B = ' + classB + ' | rows = ' + classData.length + ' | file: ' + fname;
+
+      renderClassTable(headerRow,displayRows);
+
+      classBiasSelect.innerHTML = '';
+      classBiasNames.forEach((nm,idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = (idx+1) + ': ' + nm;
+        classBiasSelect.appendChild(opt);
+      });
+      classBiasSelect.disabled = false;
+      classCurrentBias = 0;
+      classBiasSelect.value = '0';
+
+      computeFeatureMeansClass();
+
+      // initialise classification projection dims
+      classDimXIndex = 0;
+      classDimYIndex = (classD > 1) ? 1 : 0;
+      fillClassDimSelectors();
+
+      const nameX = featureNamesClass[classDimXIndex] || ('x' + (classDimXIndex+1));
+      const nameY = featureNamesClass[classDimYIndex] || ('x' + (classDimYIndex+1));
+      axisSummaryClass.textContent =
+        'Classification 2D projection in dims: ' + nameX + ' (X) vs ' + nameY + ' (Y).';
+
+      classifyBtn.disabled = false;
+      writeClassBtn.disabled = false;
+
+      classSelectedIndex = null;
+      hideClassPopup();
+      classBoundsCache = null;
+
+      classStatsDiv.textContent = 'Classification data loaded. Click CLASSIFY.';
+      renderClassPlot();
+      resizeCanvases();
+    }
+
+    function fillClassDimSelectors() {
+      classDimXSelect.innerHTML = '';
+      classDimYSelect.innerHTML = '';
+      for (let d = 0; d < classD; d++) {
+        const label = featureNamesClass[d] || ('x' + (d+1));
+        const optX = document.createElement('option');
+        optX.value = String(d);
+        optX.textContent = (d+1) + ': ' + label;
+        const optY = optX.cloneNode(true);
+        classDimXSelect.appendChild(optX);
+        classDimYSelect.appendChild(optY);
+      }
+      classDimXSelect.value = String(classDimXIndex);
+      classDimYSelect.value = String(classDimYIndex);
+    }
+
+    classDimXSelect.addEventListener('change', () => {
+      const idx = parseInt(classDimXSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= classD) return;
+      classDimXIndex = idx;
+      if (classDimYIndex === classDimXIndex) {
+        classDimYIndex = (classDimXIndex + 1) % classD;
+        classDimYSelect.value = String(classDimYIndex);
+      }
+      classBoundsCache = null;
+      const nameX = featureNamesClass[classDimXIndex] || ('x' + (classDimXIndex+1));
+      const nameY = featureNamesClass[classDimYIndex] || ('x' + (classDimYIndex+1));
+      axisSummaryClass.textContent =
+        'Classification 2D projection in dims: ' + nameX + ' (X) vs ' + nameY + ' (Y).';
+      renderClassPlot();
+    });
+
+    classDimYSelect.addEventListener('change', () => {
+      const idx = parseInt(classDimYSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= classD) return;
+      classDimYIndex = idx;
+      if (classDimYIndex === classDimXIndex) {
+        classDimXIndex = (classDimYIndex + 1) % classD;
+        classDimXSelect.value = String(classDimXIndex);
+      }
+      classBoundsCache = null;
+      const nameX = featureNamesClass[classDimXIndex] || ('x' + (classDimXIndex+1));
+      const nameY = featureNamesClass[classDimYIndex] || ('x' + (classDimYIndex+1));
+      axisSummaryClass.textContent =
+        'Classification 2D projection in dims: ' + nameX + ' (X) vs ' + nameY + ' (Y).';
+      renderClassPlot();
+    });
+
+    classBiasSelect.addEventListener('change', () => {
+      const idx = parseInt(classBiasSelect.value,10);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= classB) return;
+      classCurrentBias = idx;
+      classStatsDiv.textContent = 'Viewing bias: ' + classBiasNames[classCurrentBias];
+      renderClassPlot();
+    });
+
+    classTbody.addEventListener('click',(e) => {
+      const t = e.target;
+      if (!t.classList.contains('eye-icon')) return;
+      const idx = Number(t.dataset.index);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= classData.length) return;
+      classSelectedIndex = idx;
+      renderClassPlot();
+    });
+
+    lockCameraClass.addEventListener('change', () => {
+      classCameraLocked = lockCameraClass.checked;
+      if (!classCameraLocked) classBoundsCache = null;
+      renderClassPlot();
+    });
+
+    function clearClassCanvas() {
+      ctxClass.fillStyle = '#020617';
+      ctxClass.fillRect(0,0,classCanvas.width,classCanvas.height);
+    }
+
+    function computeBoundsClass(points) {
+      return computeBounds2D(points, classDimXIndex, classDimYIndex);
+    }
+
+    function toCanvasCoordsClass(x,y,bounds) {
+      const {minX,maxX,minY,maxY} = bounds;
+      const wCanvas = classCanvas.width - 2*PADDING_2D;
+      const hCanvas = classCanvas.height - 2*PADDING_2D;
+      const sx = (x - minX)/(maxX - minX);
+      const sy = (y - minY)/(maxY - minY);
+      const cx = PADDING_2D + sx*wCanvas;
+      const cy = classCanvas.height - (PADDING_2D + sy*hCanvas);
+      return {cx,cy};
+    }
+
+    function drawAxesClass(bounds) {
+      ctxClass.strokeStyle = '#4b5563';
+      ctxClass.lineWidth = 1;
+      ctxClass.beginPath();
+      ctxClass.moveTo(PADDING_2D, classCanvas.height - PADDING_2D);
+      ctxClass.lineTo(classCanvas.width - PADDING_2D, classCanvas.height - PADDING_2D);
+      ctxClass.stroke();
+      ctxClass.beginPath();
+      ctxClass.moveTo(PADDING_2D, classCanvas.height - PADDING_2D);
+      ctxClass.lineTo(PADDING_2D, PADDING_2D);
+      ctxClass.stroke();
+
+      const nameX = featureNamesClass[classDimXIndex] || ('x' + (classDimXIndex+1));
+      const nameY = featureNamesClass[classDimYIndex] || ('x' + (classDimYIndex+1));
+
+      ctxClass.fillStyle = '#9ca3af';
+      ctxClass.font = '12px system-ui';
+
+      ctxClass.textAlign = 'left';
+      ctxClass.fillText('X: ' + nameX + ' →',
+        classCanvas.width - PADDING_2D - 140,
+        classCanvas.height - PADDING_2D + 18);
+      ctxClass.fillText('↑ Y: ' + nameY,
+        PADDING_2D - 5,
+        PADDING_2D - 10);
+
+      ctxClass.textAlign = 'left';
+      ctxClass.fillText(bounds.minX.toFixed(2),
+        PADDING_2D,
+        classCanvas.height - PADDING_2D + 12);
+      ctxClass.textAlign = 'right';
+      ctxClass.fillText(bounds.maxX.toFixed(2),
+        classCanvas.width - PADDING_2D,
+        classCanvas.height - PADDING_2D + 12);
+
+      ctxClass.textAlign = 'right';
+      ctxClass.fillText(bounds.minY.toFixed(2),
+        PADDING_2D - 6,
+        classCanvas.height - PADDING_2D);
+      ctxClass.fillText(bounds.maxY.toFixed(2),
+        PADDING_2D - 6,
+        PADDING_2D + 4);
+
+      if (classBiasNames.length > 0) {
+        ctxClass.textAlign = 'right';
+        ctxClass.font = 'bold 13px system-ui';
+        ctxClass.fillStyle = '#f97316';
+        ctxClass.fillText('Bias: ' + classBiasNames[classCurrentBias],
+          classCanvas.width - PADDING_2D + 4,
+          PADDING_2D + 2);
+      }
+      ctxClass.textAlign = 'left';
+    }
+
+    function drawPointsClass(bounds) {
+      classPointScreenPositions = [];
+      for (let i = 0; i < classData.length; i++) {
+        const row = classData[i];
+        const x = row.features[classDimXIndex];
+        const y = row.features[classDimYIndex];
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        const {cx,cy} = toCanvasCoordsClass(x,y,bounds);
+        classPointScreenPositions.push({cx,cy,index:i});
+        ctxClass.beginPath();
+        ctxClass.arc(cx,cy,5,0,2*Math.PI);
+        const labRaw = row.biases[classCurrentBias];
+        const lab01 = Number(labRaw) === 1 ? 1 : 0;
+        ctxClass.fillStyle = lab01 === 1 ? '#22c55e' : '#ef4444';
+        ctxClass.fill();
+      }
+    }
+
+    function drawLineForWClass(fullW,bounds,color,width) {
+      const proj = projectedWeights2DGeneric(fullW, classD, classDimXIndex, classDimYIndex, classFeatureMeans);
+      if (!proj) return;
+      const w0 = proj[0], w1 = proj[1], w2 = proj[2];
+      if ((w1 === 0 && w2 === 0) || !Number.isFinite(w0)) return;
+
+      ctxClass.setLineDash([]);
+      ctxClass.strokeStyle = color;
+      ctxClass.lineWidth = width;
+
+      const {minX,maxX,minY,maxY} = bounds;
+      ctxClass.beginPath();
+
+      if (Math.abs(w2) > 1e-8) {
+        const xA = minX;
+        const yA = -(w0 + w1*xA)/w2;
+        const xB = maxX;
+        const yB = -(w0 + w1*xB)/w2;
+        const A = toCanvasCoordsClass(xA,yA,bounds);
+        const B = toCanvasCoordsClass(xB,yB,bounds);
+        ctxClass.moveTo(A.cx,A.cy);
+        ctxClass.lineTo(B.cx,B.cy);
+      } else {
+        const xV = -w0/w1;
+        const A = toCanvasCoordsClass(xV,minY,bounds);
+        const B = toCanvasCoordsClass(xV,maxY,bounds);
+        ctxClass.moveTo(A.cx,A.cy);
+        ctxClass.lineTo(B.cx,B.cy);
+      }
+      ctxClass.stroke();
+    }
+
+    function renderClassPlot() {
+      clearClassCanvas();
+      if (classData.length === 0) return;
+
+      let bounds;
+      if (classCameraLocked && classBoundsCache) bounds = classBoundsCache;
+      else {
+        bounds = computeBoundsClass(classData);
+        classBoundsCache = bounds;
+      }
+      classLastBounds = bounds;
+
+      drawAxesClass(bounds);
+      drawPointsClass(bounds);
+
+      const wCur = classBiasWeights[classCurrentBias];
+      if (wCur) drawLineForWClass(wCur,bounds,'#06b6d4',2);
+
+      if (classSelectedIndex !== null &&
+          classSelectedIndex >= 0 &&
+          classSelectedIndex < classData.length &&
+          blinkState) {
+        const pt = classPointScreenPositions.find(p => p.index === classSelectedIndex);
+        if (pt) {
+          ctxClass.beginPath();
+          ctxClass.arc(pt.cx,pt.cy,7.5,0,2*Math.PI);
+          ctxClass.fillStyle = '#eab308';
+          ctxClass.fill();
+        }
+      }
+    }
+
+    function hideClassPopup() {
+      classPointPopup.style.display = 'none';
+      classPopupIndex = null;
+    }
+
+    function showClassPopupForIndex(idx,xCanvas,yCanvas) {
+      const row = classData[idx];
+      if (!row) return;
+      const nameX = featureNamesClass[classDimXIndex] || ('x' + (classDimXIndex+1));
+      const nameY = featureNamesClass[classDimYIndex] || ('x' + (classDimYIndex+1));
+      const lines = [];
+      lines.push('<strong>Point #' + (idx+1) + '</strong>');
+      lines.push('Seq: ' + row.seq);
+      lines.push('ID: ' + (row.id ?? ''));
+      lines.push('Desc: ' + (row.desc ?? ''));
+      lines.push('X (' + nameX + '): ' + row.features[classDimXIndex]);
+      lines.push('Y (' + nameY + '): ' + row.features[classDimYIndex]);
+      for (let i = 0; i < classB; i++) {
+        const v = Number(row.biases[i]) === 1 ? 1 : 0;
+        lines.push(classBiasNames[i] + ': ' + v);
+      }
+      lines.push('Score: ' + (row.score ?? ''));
+      classPointPopup.innerHTML = lines.join('<br>');
+
+      const wrapperRect = classCanvas.parentElement.getBoundingClientRect();
+      const canvasRect  = classCanvas.getBoundingClientRect();
+      const offsetX = canvasRect.left - wrapperRect.left;
+      const offsetY = canvasRect.top  - wrapperRect.top;
+      const left = xCanvas + offsetX + 8;
+      const top  = yCanvas + offsetY - 8;
+      classPointPopup.style.left = left + 'px';
+      classPointPopup.style.top  = top + 'px';
+      classPointPopup.style.display = 'block';
+      classPopupIndex = idx;
+    }
+
+    classCanvas.addEventListener('click',(e) => {
+      const rect = classCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      let bestIdx = null;
+      let bestDist = Infinity;
+      const R = 10;
+      for (const p of classPointScreenPositions) {
+        const dx = p.cx - x;
+        const dy = p.cy - y;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < bestDist && d2 <= R*R) {
+          bestDist = d2;
+          bestIdx = p;
+        }
+      }
+      if (!bestIdx) {
+        hideClassPopup();
+        classSelectedIndex = null;
+        renderClassPlot();
+        return;
+      }
+      classSelectedIndex = bestIdx.index;
+      showClassPopupForIndex(bestIdx.index,bestIdx.cx,bestIdx.cy);
+      renderClassPlot();
+    });
+
+    classifyBtn.addEventListener('click', () => {
+      if (classData.length === 0 || classBiasWeights.length === 0) {
+        classStatus.textContent = 'Load classification data with bias vectors first.';
+        return;
+      }
+      activeSection = 'classify';
+      applyLayout();
+      const minCols = 3 + classD + classB + 1;
+      const scoreIdx = 3 + classD + classB;
+
+      classData.forEach(row => {
+        const feats = new Array(classD).fill(0);
+        for (let d = 0; d < classD; d++) {
+          const v = row.features[d];
+          feats[d] = Number.isFinite(v) ? v : 0;
+        }
+        let scoreSum = 0;
+        const newBiases = [];
+        for (let bIdx = 0; bIdx < classB; bIdx++) {
+          const w = classBiasWeights[bIdx];
+          if (!w) {
+            newBiases[bIdx] = '';
+            continue;
+          }
+          let s = w[0];
+          for (let d = 0; d < classD; d++) s += w[1+d]*feats[d];
+          const pred = s >= 0 ? 1 : 0;
+          newBiases[bIdx] = pred;
+          scoreSum += pred;
+        }
+        row.biases = newBiases;
+        row.score = scoreSum;
+      });
+
+      const displayRows = classData.map(ld => {
+        const row = new Array(minCols).fill('');
+        row[0] = ld.seq;
+        row[1] = ld.id;
+        row[2] = ld.desc;
+        for (let j = 0; j < classD; j++) row[3+j] = ld.features[j];
+        for (let k = 0; k < classB; k++) row[3+classD+k] = ld.biases[k];
+        row[scoreIdx] = ld.score;
+        return row;
+      });
+
+      renderClassTable(classHeaderRow,displayRows);
+
+      let sumScore = 0;
+      let nScore = 0;
+      for (const row of classData) {
+        const val = Number(row.score);
+        if (Number.isFinite(val)) { sumScore += val; nScore++; }
+      }
+      const avgScore = nScore>0 ? (sumScore/nScore).toFixed(2) : '0.00';
+      classStatsDiv.textContent =
+        'Classification done. Rows = ' + classData.length + '. Average Score = ' + avgScore + '.';
+      renderClassPlot();
+    });
+
+    writeClassBtn.addEventListener('click', () => {
+      if (!classHeaderRow || classBiasWeights.length === 0) {
+        alert('No classification data.');
+        return;
+      }
+      const filename = prompt('Enter classified output filename','xlm_classified_output.xlsx')
+        || 'xlm_classified_output.xlsx';
+      const aoa = [];
+      aoa.push([classD,classB]);
+
+      for (let i = 0; i < classB; i++) {
+        const row = [];
+        row[0] = classBiasNames[i];
+        const w = classBiasWeights[i] || new Array(classD+1).fill(0);
+        for (let j = 0; j <= classD; j++) row[1+j] = w[j];
+        aoa.push(row);
+      }
+
+      const minCols = 3 + classD + classB + 1;
+      const scoreIdx = 3 + classD + classB;
+      const headerOut = classHeaderRow.slice();
+      while (headerOut.length < minCols) headerOut.push('');
+      if (!headerOut[scoreIdx] || String(headerOut[scoreIdx]).trim() === '') {
+        headerOut[scoreIdx] = 'Score';
+      }
+      aoa.push(headerOut);
+
+      classData.forEach(ld => {
+        const row = new Array(minCols).fill('');
+        row[0] = ld.seq;
+        row[1] = ld.id;
+        row[2] = ld.desc;
+        for (let j = 0; j < classD; j++) row[3+j] = ld.features[j];
+        let scoreSum = 0;
+        for (let k = 0; k < classB; k++) {
+          const v = Number(ld.biases[k]) === 1 ? 1 : 0;
+          row[3+classD+k] = v;
+          scoreSum += v;
+        }
+        row[scoreIdx] = scoreSum;
+        aoa.push(row);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+      XLSX.writeFile(wb, filename);
+    });
+
+    function resizeCanvases() {
+      const rectTrainWrapper = plotCanvas.parentElement.getBoundingClientRect();
+      if (!use3DTrain) {
+        plotCanvas.width  = Math.max(200, rectTrainWrapper.width  - 4);
+        plotCanvas.height = Math.max(200, rectTrainWrapper.height - 4);
+        ctx = plotCanvas.getContext('2d');
+        renderTrainPlot2D();
+      } else if (trainRenderer) {
+        const w = Math.max(200, rectTrainWrapper.width  - 4);
+        const h = Math.max(200, rectTrainWrapper.height - 4);
+        trainRenderer.setSize(w,h);
+        if (trainCamera) {
+          trainCamera.aspect = w/h;
+          trainCamera.updateProjectionMatrix();
+        }
+        renderTrainPlot3D();
+      }
+
+      const rectClassWrapper = classCanvas.parentElement.getBoundingClientRect();
+      classCanvas.width  = Math.max(200, rectClassWrapper.width  - 4);
+      classCanvas.height = Math.max(200, rectClassWrapper.height - 4);
+      ctxClass = classCanvas.getContext('2d');
+      renderClassPlot();
+    }
+
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    // Global blink timer (2D train, 3D train highlight, 2D class)
+    blinkIntervalId = setInterval(() => {
+      blinkState = !blinkState;
+      renderTrainPlot();
+      renderClassPlot();
+    }, 500);
+  </script>
+</body>
+</html>
